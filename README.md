@@ -2,217 +2,363 @@
 
 A clean, production-ready Laravel API for managing field operations with offline-first capabilities. Built following CubeZoo's architectural principles with proper RBAC, queues, and comprehensive testing.
 
-## Quick Start
+---
 
-### Prerequisites
-- Docker & Docker Compose
-- OR: PHP 8.1+, Composer, SQLite/MySQL
+# Quick Start (Docker Compose Only)
 
-### Setup (Docker)
+## Prerequisites
+
+* Docker
+* Docker Compose
+
+---
+
+## Full Setup Using Docker
+
+### 1. Clone the repository
 
 ```bash
-# 1. Clone and navigate to project
-git clone <repository-url>
+git clone https://github.com/santerencemanyike/cubezoo
 cd cubezoo
-
-# 2. Start services
-sudo docker-compose up -d
-
-# 3. Install dependencies
-sudo docker exec -it laravel_app bash -c "composer install"
-
-# 4. Run migrations
-sudo docker exec -it laravel_app bash -c "php artisan migrate"
-
-# 5. (Optional) Seed demo data
-sudo docker exec -it laravel_app bash -c "php artisan db:seed"
-
-# 6. Run tests
-sudo docker exec -it laravel_app bash -c "php artisan test"
-
-# 7. Start queue worker (in separate terminal)
-sudo docker exec -it laravel_app bash -c "php artisan queue:work"
 ```
 
-### Setup (Local)
+---
+
+### 2. Start Docker containers
 
 ```bash
-# Install dependencies
+sudo docker compose up -d --build
+```
+
+---
+
+### 3. Fix file permissions
+
+**IMPORTANT:** Run this to prevent permission errors
+
+```bash
+sh fixperms.sh
+```
+
+---
+
+### 4. Enter the Laravel container
+
+```bash
+sudo docker exec -it laravel_app bash
+```
+
+You will now be inside the container:
+
+```bash
+root@container:/var/www/html#
+```
+
+---
+
+### 5. Install PHP dependencies
+
+Inside container:
+
+```bash
 composer install
+```
 
-# Configure environment
-cp .env.example .env
+---
+
+### 6. Generate application key
+
+```bash
 php artisan key:generate
+```
 
-# Run migrations
+---
+
+### 7. Run main database migrations, (Optional)
+
+```bash
 php artisan migrate
-
-# Run tests
-php artisan test
-
-# Start queue worker
-php artisan queue:work
-
-# Serve the API
-php artisan serve
 ```
 
-## Architecture & Design
+---
 
-### Entities
+# Laravel Telescope Installation
 
-**User**
-- `id` (PK)
-- `name`, `email`, `password`
-- `roles()` - Many-to-many relationship (Admin or Staff)
-- Timestamps
+Laravel Telescope is used for debugging jobs, requests, and queues.
 
-**Site**
-- `id` (PK)
-- `name`, `address` (optional)
-- `visits()` - Has many visits
-- Timestamps
+---
 
-**Visit**
-- `id` (UUID)
-- `site_id` (FK)
-- `user_id` (FK)
-- `visited_at` (ISO 8601 UTC datetime)
-- `notes` (max 500 chars)
-- `status` enum: `draft`, `submitted`
-- `events()` - Has many visit events
-- Timestamps
+### 8. Install Telescope
 
-**VisitEvent**
-- `id` (PK)
-- `visit_id` (FK)
-- `event` (string, e.g., "submitted_processed")
-- Timestamps
+Inside container:
 
-**Running the Queue Worker**:
 ```bash
-# Docker
+composer require laravel/telescope:^4.6
+```
+
+---
+
+### 9. Publish Telescope files
+
+```bash
+php artisan telescope:install
+```
+
+---
+
+### 10. Run Telescope migrations
+
+```bash
+php artisan migrate
+```
+
+---
+
+### 11. Access Telescope
+
+Open in browser:
+
+```
+http://localhost:8000/telescope
+```
+
+---
+
+# Queue Worker
+
+Start the queue worker:
+
+```bash
 sudo docker exec -it laravel_app bash -c "php artisan queue:work"
-
-# Local
-php artisan queue:work
-
-# With specific queue
-php artisan queue:work processing
 ```
 
-## Testing
+---
 
-### Run All Tests
+# Running Tests
+
+Inside container:
+
 ```bash
 php artisan test
 ```
 
-### Run Specific Test File
+or
+
 ```bash
-php artisan test tests/Feature/RBACTest.php
-php artisan test tests/Feature/VisitSubmissionTest.php
+sudo docker exec -it laravel_app bash -c "php artisan test"
 ```
 
-### Test Coverage
+---
 
-**RBACTest.php**
-- ✓ Admin can create sites
-- ✓ Staff cannot create sites
-- ✓ Unauthenticated cannot access protected routes
+# Application Access
 
-**VisitSubmissionTest.php**
-- ✓ Staff can create visit (draft status)
-- ✓ Staff can submit visit (triggers job)
-- ✓ Idempotency: submitting twice returns 400
-- ✓ Staff cannot submit other users' visits
+| Service     | URL                             |
+| ----------- | ------------------------------- |
+| Laravel App | http://localhost:8000           |
+| Telescope   | http://localhost:8000/telescope |
 
-## Example Workflows
+---
 
-### Mobile Staff Workflow
+# Architecture & Design
 
-1. **Login**
+## Entities
+
+### User
+
+* id
+* name
+* email
+* password
+* roles
+* timestamps
+
+---
+
+### Site
+
+* id
+* name
+* address
+* timestamps
+
+---
+
+### Visit
+
+* id (UUID)
+* site_id
+* user_id
+* visited_at
+* notes
+* status
+
+Status values:
+
+```
+draft
+submitted
+```
+
+---
+
+### VisitEvent
+
+* id
+* visit_id
+* event
+* timestamps
+
+---
+
+# Queue System
+
+Queue handles visit submission processing.
+
+Run worker:
+
+```bash
+sudo docker exec -it laravel_app bash -c "php artisan queue:work"
+```
+
+---
+
+# API Example Workflow
+
+---
+
+## Login
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "admin@admin.com",
-    "password": "password"
-  }'
+-H "Content-Type: application/json" \
+-d '{
+"email":"admin@admin.com",
+"password":"password"
+}'
 ```
 
-2. **Create Visit (Draft)**
+---
+
+## Create Visit
+
 ```bash
-TOKEN="1|abc123token"
 curl -X POST http://localhost:8000/api/v1/visits \
-  -H "Authorization: Bearer TOKEN" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{
-    "site_id": 1,
-    "visited_at": "2026-02-26 14:00:00",
-    "notes": "Equipment checked. Battery low."
-  }'
+-H "Authorization: Bearer TOKEN" \
+-H "Content-Type: application/json" \
+-H "Accept: application/json" \
+-d '{
+"site_id":1,
+"visited_at":"2026-02-26 14:00:00",
+"notes":"Equipment checked"
+}'
 ```
 
-3. **Submit Visit**
+---
+
+## Submit Visit
+
 ```bash
-VISIT_ID="550e8400-e29b-41d4-a716-446655440000"
-curl -X POST http://localhost:8000/api/v1/visits/$VISIT_ID/submit \
-  -H "Authorization: Bearer $TOKEN"
+curl -X POST http://localhost:8000/api/v1/visits/VISIT_ID/submit \
+-H "Authorization: Bearer TOKEN"
 ```
 
-### Admin Review Workflow
+---
 
-1. **List All Visits for Site**
+# Admin Workflow
+
+---
+
+## List Site Visits
+
 ```bash
-TOKEN="1|admin-token"
-curl -X GET "http://localhost:8000/api/v1/sites/1/visits?from=2026-02-01&to=2026-02-28" \
-  -H "Authorization: Bearer $TOKEN"
+curl -X GET http://localhost:8000/api/v1/sites/1/visits \
+-H "Authorization: Bearer TOKEN"
 ```
 
-2. **Create New Site**
+---
+
+## Create Site
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/sites \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "New Branch Office",
-    "address": "456 Oak Ave"
-  }'
+-H "Authorization: Bearer TOKEN" \
+-H "Content-Type: application/json" \
+-d '{
+"name":"New Site",
+"address":"Address"
+}'
 ```
 
-## Architecture Decisions & Trade-offs
+---
 
-### 1. **Sanctum for Authentication**
-- **Why**: Laravel native, supports token-based auth (critical for mobile)
-- **Trade-off**: No OAuth2; sufficient for internal mobile apps
-- **Alternative**: Passport (heavier) or custom JWT
+# Testing
 
-### 2. **Job Queue for Submissions**
-- **Why**: Decouples external API calls from request handling; enables retries
-- **Trade-off**: Eventual consistency (async processing)
-- **Idempotency**: Checked via `status = submitted` to prevent double-processing
+Run all tests:
 
-### 3. **Resource/Transformer Pattern**
-- **Why**: Separates API contracts from model structure
-- **Trade-off**: Extra layer but enables safe refactoring
-- **Benefit**: Version-aware data transformation
-
-### 3. **Resource/Transformer Pattern**
-- **Why**: Easy access with just /telescope
-- **Trade-off**: Only good for local dev
-- **Benefit**: Easy to inspect jobs and queries
-
-### Tests Failing
 ```bash
-# Ensure test database exists
-php artisan migrate --env=testing
-
-# Run with verbose output
-php artisan test --verbose
+sudo docker exec -it laravel_app bash -c "php artisan test"
 ```
 
-## License
+---
+
+# Telescope Features
+
+Telescope allows you to monitor:
+
+* Jobs
+* Requests
+* Queries
+* Logs
+* Exceptions
+
+Access:
+
+```
+http://localhost:8000/telescope
+```
+
+---
+
+# Common Useful Commands
+
+Enter container:
+
+```bash
+sudo docker exec -it laravel_app bash
+```
+
+Run migrations:
+
+```bash
+php artisan migrate
+```
+
+Run queue:
+
+```bash
+php artisan queue:work
+```
+
+Clear cache:
+
+```bash
+php artisan optimize:clear
+```
+
+---
+
+# Project Stack
+
+* Laravel
+* Docker
+* MySQL
+* Laravel Queue
+* Laravel Telescope
+
+---
+
+# License
 
 © 2026 CubeZoo. All rights reserved.
+
+---
