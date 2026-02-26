@@ -1,0 +1,49 @@
+services:
+  app:
+    build:
+      context: .
+      args:
+        APP_ENV: ${APP_ENV}
+    container_name: laravel_app
+    ports:
+      - "8000:80"
+    env_file:
+      - .env
+    depends_on:
+      - db
+    volumes:
+      - ./:/var/www/html
+      - ./storage:/var/www/html/storage
+    restart: unless-stopped
+
+  queue:
+    build:
+      context: .
+      args:
+        APP_ENV: ${APP_ENV}
+    container_name: laravel_queue
+    command: php artisan queue:work --tries=3 --timeout=90
+    env_file:
+      - .env
+    depends_on:
+      - db
+    volumes:
+      - ./storage:/var/www/html/storage
+    restart: unless-stopped
+
+  db:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: laravel
+      MYSQL_USER: laravel_user
+      MYSQL_PASSWORD: secret
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:
