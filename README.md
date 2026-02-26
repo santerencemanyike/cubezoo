@@ -136,7 +136,7 @@ php artisan test tests/Feature/VisitSubmissionTest.php
 curl -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "staff@example.com",
+    "email": "admin@admin.com",
     "password": "password"
   }'
 ```
@@ -145,11 +145,12 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
 ```bash
 TOKEN="1|abc123token"
 curl -X POST http://localhost:8000/api/v1/visits \
-  -H "Authorization: Bearer $TOKEN" \
+  -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
   -d '{
     "site_id": 1,
-    "visited_at": "2026-02-26T14:00:00Z",
+    "visited_at": "2026-02-26 14:00:00",
     "notes": "Equipment checked. Battery low."
   }'
 ```
@@ -197,6 +198,11 @@ curl -X POST http://localhost:8000/api/v1/sites \
 - **Why**: Separates API contracts from model structure
 - **Trade-off**: Extra layer but enables safe refactoring
 - **Benefit**: Version-aware data transformation
+
+### 3. **Resource/Transformer Pattern**
+- **Why**: Easy access with just /telescope
+- **Trade-off**: Only good for local dev
+- **Benefit**: Easy to inspect jobs and queries
 
 ### Tests Failing
 ```bash

@@ -16,13 +16,16 @@ use App\Jobs\ProcessVisitSubmission;
 class VisitController extends Controller
 {
     // Web index view (for admin, per site)
-    public function index(Site $site)
+    public function index()
     {
         abort_if(Gate::denies('visit_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
 
-        $visits = $site->visits()->paginate(20);
+        // Get all visits, eager load user & site
+        $visits = Visit::with(['user', 'site'])
+            ->orderBy('visited_at', 'desc')
+            ->paginate(20);
 
-        return view('admin.visits.index', compact('visits', 'site'));
+        return view('admin.visits.index', compact('visits'));
     }
 
     // Web create view
