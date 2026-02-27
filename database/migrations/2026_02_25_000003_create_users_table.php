@@ -16,7 +16,7 @@ class CreateUsersTable extends Migration
             $table->string('password');
             $table->string('remember_token')->nullable();
             $table->string('image')->nullable();
-            $table->string('role')->default('staff'); // Add role column
+            $table->string('role')->default('Staff'); // Add role column
             $table->timestamps();
             $table->softDeletes();
         });
