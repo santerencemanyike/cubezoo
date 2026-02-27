@@ -28,4 +28,29 @@ class AuthController extends Controller
             'token' => $user->createToken('api')->plainTextToken
         ]);
     }
+
+     /**
+     * REGISTER
+     */
+    public function register(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string'],
+            'email' => ['required', 'email', 'unique:users,email'],
+            'password' => ['required', 'confirmed'],
+        ]);
+
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            // role not needed — defaults to 'Staff'
+        ]);
+
+        return response()->json([
+            'message' => 'User registered successfully',
+            'token' => $user->createToken('api')->plainTextToken,
+            'role' => $user->role,
+        ], 201);
+    }
 }

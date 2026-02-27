@@ -5,31 +5,12 @@ use App\Http\Controllers\Api\V1\Admin\AuthController;
 use App\Http\Controllers\Api\V1\Admin\SiteController;
 use App\Http\Controllers\Api\V1\Admin\VisitController;
 use App\Http\Controllers\Api\V1\Admin\SiteVisitController;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use App\Models\User;
 
 Route::prefix('v1')->group(function () {
 
-    // Public login
-    Route::post('/auth/login', function (Request $request) {
-        $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
-
-        if (!Auth::attempt($credentials)) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
-        }
-
-        $user = User::where('email', $credentials['email'])->first();
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return response()->json([
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-        ]);
-    });
+    // Public authentication
+    Route::post('/auth/login', [AuthController::class, '__invoke']);
+    Route::post('/auth/register', [AuthController::class, 'register']);
 
     // Protected
     Route::middleware('auth:sanctum')->group(function () {
